@@ -79,7 +79,7 @@ int     STREAMLINE_RES = 10;
 int     DISPLAY_MODE  = 1;
 
 boolean APPLY_IMPULSE       = false;
-boolean DISPLAY_STREAMLINES = true;
+boolean DISPLAY_STREAMLINES = !true;
 boolean DISPLAY_PARTICLES   = !true;
 boolean BLUR_ITERATIONS     = true;
 
@@ -118,14 +118,14 @@ public void setup() {
   ff_impulse = new DwFlowField(context);
 
   ff_impulse.param.blur_iterations = 1;
-  ff_impulse.param.blur_radius     = 2;
+  ff_impulse.param.blur_radius     = 6;
 
-  ff_impulse.param_lic.iterations     = 2;
-  ff_impulse.param_lic.num_samples    = 25;
-  ff_impulse.param_lic.acc_mult       = 1.00f;
-  ff_impulse.param_lic.vel_mult       = 1.00f;
-  ff_impulse.param_lic.intensity_mult = 1.40f;
-  ff_impulse.param_lic.intensity_exp  = 1.50f;
+  ff_impulse.param_lic.iterations     = 5;
+  ff_impulse.param_lic.num_samples    = 5;
+  ff_impulse.param_lic.acc_mult       = 1.69f;
+  ff_impulse.param_lic.vel_mult       = 1.15f;
+  ff_impulse.param_lic.intensity_mult = 1.80f;
+  ff_impulse.param_lic.intensity_exp  = 0.57f;
   ff_impulse.param_lic.TRACE_BACKWARD = true;
   ff_impulse.param_lic.TRACE_FORWARD  = false;
 
@@ -138,7 +138,7 @@ public void setup() {
   particles_stream.param.steps = 1;
   particles_stream.param.mul_obs =  0.0f;
   particles_stream.param.mul_col =  0.0f;
-  particles_stream.param.mul_coh =  0.0f;
+  particles_stream.param.mul_coh =  0.0f;  
   particles_stream.param.mul_acc = +5.0f;
   particles_stream.param.velocity_damping = 0.30f;
 
@@ -225,18 +225,25 @@ public void addImpulse(MovingVector mv) {
 
   float mult = 200f / impulse_radius;
 
-  // mouse position and velocity
-  if (mv.p != null) {
-    pmx = mv.p.x + width / 2; 
-    pmy = height - (mv.p.y + height / 2);
+
+  if (useMouse) {
+    mx =  mouseX;
+    my =  mouseY;
+    pmx = pmouseX;
+    pmy = pmouseY;
   } else {
-    pmx = 0; 
-    pmy = 0;
+    mx =  mv.c.x + width / 2;  
+    my =  height - (mv.c.y + height / 2);
+    // mouse position and velocity
+    if (mv.p != null) {
+      pmx = mv.p.x + width / 2; 
+      pmy = height - (mv.p.y + height / 2);
+    } else {
+      pmx = width / 2; 
+      pmy = height / 2;
+    }
   }
-  mx =  mv.c.x + width / 2;  
-  my =  height - (mv.c.y + height / 2);
-  // mx =  mouseX;  my =  mouseY;
-  //pmx = pmouseX; pmy = pmouseY;
+
   vx = (mx - pmx) * +impulse_mul * mult;
   vy = (my - pmy) * -impulse_mul * mult; // flip vertically
 
@@ -280,15 +287,20 @@ public void draw() {
 
   resizeScene();
 
-  for (MovingVector hand : k.vectorsFor( new int[] {
-    KinectPV2.JointType_HandLeft, 
-    KinectPV2.JointType_HandRight,
-    KinectPV2.JointType_FootRight,
-    KinectPV2.JointType_FootLeft
+  if (useMouse) {
+    addImpulse(null);
+  } else {
+    for (MovingVector hand : k.vectorsFor(new int[] {
+      KinectPV2.JointType_HandLeft, 
+      KinectPV2.JointType_HandRight, 
+      KinectPV2.JointType_FootRight, 
+      KinectPV2.JointType_FootLeft
+      }
+      )) {
+      addImpulse(hand);
     }
-    )) {
-    addImpulse(hand);
   }
+
 
 
   resetScene();
@@ -325,32 +337,7 @@ public void draw() {
     particles_stream.spawn(dim_x, dim_y, sr);
 
     particles_stream.param.shader_type = 0;
-    particles_stream.param.size_display = (int) max(2, (0.55f * min(dim_x/(float)num_x, dim_y/(float)num_y)));
-
-    //      float mul_vec = particles_stream.param.velocity_damping;
-    //      float mul_acc = particles_stream.param.mul_acc;
-    //      float mul_coh = particles_stream.param.mul_coh;
-    //      float mul_col = particles_stream.param.mul_col;
-    //      float mul_obs = particles_stream.param.mul_obs;
-    //
-    //      particles_stream.param.mul_coh = 0;
-    //      particles_stream.param.mul_col = 0;
-    //      particles_stream.param.mul_obs = 0;
-    //      
-    //      if(keyPressed && key =='w')
-    //      {
-    //        int warmup = min(5, iterations / 5);
-    //        for(int i = 0; i < warmup; i++){
-    //          particles_stream.param.velocity_damping = (1.0f - i / (float)(warmup-1)) * 2.0f;
-    //          particles_stream.update(ff_impulse);
-    //        }
-    //      }
-    //      
-    //      particles_stream.param.velocity_damping =  mul_vec;
-    //      particles_stream.param.mul_acc          = -mul_acc;
-    //      particles_stream.param.mul_coh          = mul_coh;      
-    //      particles_stream.param.mul_col          = mul_col;      
-    //      particles_stream.param.mul_obs          = mul_obs;      
+    particles_stream.param.size_display = (int) max(2, (0.55f * min(dim_x/(float)num_x, dim_y/(float)num_y)));    
 
 
     float s1 = 0.40f;
@@ -378,21 +365,13 @@ public void draw() {
       }
 
       if (DISPLAY_PARTICLES) {
-        //          particles_stream.displayParticles(pg_canvas);
         float p1 = 2.0f;
         float p2 = 1f;
-        //          particles_stream.param.col_A = new float[]{0.20f*p1,0.02f*p1,0.00f*p1,0.50f};
-        //          particles_stream.param.col_B = new float[]{0.00f*p2,0.00f*p2,0.00f*p2,0.00f};
         particles_stream.param.col_A = new float[]{0.20f*p1, 0.05f*p1, 0.02f*p1, 0.50f};
         particles_stream.param.col_B = new float[]{0.00f*p2, 0.00f*p2, 0.00f*p2, 0.00f};
         particles_stream.displayParticles(pg_canvas);
       }
     }
-
-
-
-    //      particles_stream.param.mul_acc          = mul_acc;
-    //      particles_stream.param.velocity_damping = mul_vec;
   }
 
   blendMode(REPLACE); 
@@ -419,6 +398,7 @@ public void keyReleased() {
   if (key == 'r') reset();
   if (key == 'h') toggleGUI();
   if (key == 'd') toggleDebugs();
+  if (key == 'm') toggleMouse();
   if (key >= '1' && key <= '9') DISPLAY_MODE = key - '1';
 }
 
@@ -440,6 +420,12 @@ public void setLicStates(float[] val) {
 public void setDisplayStreamLine(float[] val) {
   DISPLAY_STREAMLINES = val[0] > 0;
   DISPLAY_PARTICLES   = val[1] > 0;
+}
+
+boolean useMouse = false;
+public void toggleMouse() {
+  useMouse = !useMouse;
+  println(useMouse);
 }
 
 boolean showDebug = true;
@@ -605,18 +591,6 @@ public void createGUI() {
     cp5.addSlider("StreamLine.acc_mult").setLabel("acc_mult").setGroup(group_streamlines).setSize(sx, sy).setPosition(px, py)
       .setRange(-10, 10).setValue(param.mul_acc).plugTo(param, "mul_acc");
     py += sy + dy_group;
-
-
-    //      cp5.addSlider("StreamLine.size_collision").setLabel("size_collision").setGroup(group_streamlines).setSize(sx, sy).setPosition(px, py)
-    //      .setRange(0, 20).setValue(param.size_collision).plugTo(param, "size_collision");
-    //      py += sy + dy_item;
-    //      
-    //      cp5.addSlider("StreamLine.size_cohesion").setLabel("size_cohesion").setGroup(group_streamlines).setSize(sx, sy).setPosition(px, py)
-    //      .setRange(0, 50).setValue(param.size_cohesion).plugTo(param, "size_cohesion");
-    //      py += sy + dy_group;
-
-
-
 
     cp5.addCheckBox("setStreamLineStates").setGroup(group_streamlines).setSize(sy, sy).setPosition(px, py)
       .setSpacingColumn(2).setSpacingRow(2).setItemsPerRow(1)

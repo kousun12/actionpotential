@@ -9,6 +9,7 @@ class KinectStream {
   final float rotX = PI;
   final int zScale = 4;
   HashMap<Integer, ArrayList<MovingVector>> joints = new HashMap();
+  PGraphics3D canvas;
 
   KinectStream(PApplet p) {
     k = new KinectPV2(p);
@@ -18,16 +19,18 @@ class KinectStream {
     k.init();
   }
 
-  void drawDebugs() {
-    image(k.getDepthMaskImage(), 0, 0, 320, 240);
+  void drawDebugs(PGraphics3D canvas) {
+    this.canvas = canvas;
+    canvas.image(k.getDepthMaskImage(), 0, 0, 320, 240);
     ArrayList<PImage> bodyTrackList = k.getBodyTrackUser();
     for (int i = 0; i < bodyTrackList.size(); i++) {
       PImage bodyTrackImg = (PImage)bodyTrackList.get(i);
       if (i <= 2)
-        image(bodyTrackImg, 320 + 240*i, 0, 320, 240);
+        canvas.image(bodyTrackImg, 320 + 240*i, 0, 320, 240);
       else
-        image(bodyTrackImg, 320 + 240*(i - 3), 424, 320, 240 );
+        canvas.image(bodyTrackImg, 320 + 240*(i - 3), 424, 320, 240 );
     }
+    drawSkels();
   }
 
   ArrayList<KJoint[]> allJoints() {
@@ -59,13 +62,13 @@ class KinectStream {
         KJoint[] joints = jointMatrix.get(i);
         KJoint right = joints[type];
         try {
-          list.get(i).update(right.getPosition().mult(zVal));
+          list.get(i).update(posFor(right).mult(zVal));
         } 
         catch (IndexOutOfBoundsException ie) {
-          list.add(new MovingVector(right.getPosition().mult(zVal)));
+          list.add(new MovingVector(posFor(right).mult(zVal)));
         }
       }
-      for(MovingVector i: list) {
+      for (MovingVector i : list) {
         all.add(i);
       }
     }
@@ -91,51 +94,20 @@ class KinectStream {
     return list;
   }
 
-  //ArrayList<MovingVector> leftHands() {
-  //  ArrayList<KJoint[]> jointMatrix = allJoints();
-  //  for (int i = 0; i<jointMatrix.size(); i++) {
-  //    KJoint[] joints = jointMatrix.get(i);
-  //    KJoint right = joints[KinectPV2.JointType_HandLeft];
-  //    try {
-  //      lHands.get(i).update(right.getPosition().mult(zVal));
-  //    } 
-  //    catch (IndexOutOfBoundsException ie) {
-  //      lHands.add(new MovingVector(right.getPosition().mult(zVal)));
-  //    }
-  //  }
-  //  return lHands;
-  //}
-
-  //ArrayList<MovingVector> rightHands() {
-  //  ArrayList<KJoint[]> jointMatrix = allJoints();
-  //  for (int i = 0; i<jointMatrix.size(); i++) {
-  //    KJoint[] joints = jointMatrix.get(i);
-  //    KJoint right = joints[KinectPV2.JointType_HandRight];
-  //    try {
-  //      rHands.get(i).update(right.getPosition().mult(zVal));
-  //    } 
-  //    catch (IndexOutOfBoundsException ie) {
-  //      rHands.add(new MovingVector(right.getPosition().mult(zVal)));
-  //    }
-  //  }
-  //  return rHands;
-  //}
-
   void drawSkels() {
     //translate the scene to the center 
-    pushMatrix();
-    translate(width/2, height/2, 0);
-    //scale(zVal);
-    rotateX(rotX);
-    fill(30, 40, 30);
-    stroke(30, 40, 30);
+    canvas.pushMatrix();
+    canvas.translate(width/2, height/2, 0);
+    canvas.rotateX(rotX);
+    canvas.fill(255, 40, 30);
+    canvas.stroke(255, 40, 30);
     for (KJoint[] joints : allJoints()) {
-      //drawBody(joints);
+      drawBody(joints);
       for (KJoint hand : handJoints(joints)) {
         drawHandState(hand);
       }
     }
-    popMatrix();
+    canvas.popMatrix();
   }
 
   void drawBody(KJoint[] joints) {
@@ -185,41 +157,49 @@ class KinectStream {
   }
 
   PVector posFor(KJoint joint) {
-    return joint.getPosition();
+    return joint.getPosition().copy();
   }
 
   void drawJoint(KJoint[] joints, int jointType) {
+    canvas.fill(255, 40, 30);
+    canvas.stroke(255, 40, 30);
     PVector pos = posFor(joints[jointType]).mult(zVal);
-    strokeWeight(2.0f + pos.z * zScale / zVal);
-    point(pos.x, pos.y, pos.z);
+    canvas.strokeWeight(2.0f + pos.z * zScale / zVal);
+    canvas.point(pos.x, pos.y);
   }
 
   void drawBone(KJoint[] joints, int jointType1, int jointType2) {
+    canvas.fill(2, 40, 230);
+    canvas.stroke(25, 40, 230);
     PVector pos = posFor(joints[jointType2]).mult(zVal);
-    strokeWeight(((2.0f + pos.z * zScale / zVal)));
-    //line(x1, y1, x, y); 
-    point(pos.x, pos.y, pos.z);
+    PVector pos1 = posFor(joints[jointType1]).mult(zVal);
+
+    canvas.strokeWeight(2.0f + pos.z * zScale / zVal);
+    canvas.line(pos1.x, pos1.y, pos.x, pos.y); 
+    canvas.point(pos.x, pos.y);
   }
 
   void drawHandState(KJoint joint) {
+    PVector pos = posFor(joint).mult(zVal);
     handState(joint.getState());
-    strokeWeight((5.0f + joint.getZ()*zScale));
-    point(joint.getX() * zVal, joint.getY() * zVal, joint.getZ() * zVal);
+    canvas.strokeWeight(((2.0f + pos.z * zScale / zVal) * 4));
+    canvas.point(pos.x, pos.y);
   }
 
   void handState(int handState) {
+    println(handState);
     switch(handState) {
     case KinectPV2.HandState_Open:
-      stroke(0, 255, 0);
+      canvas.stroke(0, 255, 0);
       break;
     case KinectPV2.HandState_Closed:
-      stroke(255, 0, 0);
+      canvas.stroke(255, 0, 0);
       break;
     case KinectPV2.HandState_Lasso:
-      stroke(0, 0, 255);
+      canvas.stroke(0, 0, 255);
       break;
     case KinectPV2.HandState_NotTracked:
-      stroke(100, 100, 100);
+      canvas.stroke(100, 100, 100);
       break;
     }
   }

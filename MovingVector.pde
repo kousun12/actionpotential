@@ -7,7 +7,7 @@ class MovingVector {
   }
   
   public void update(PVector vec) {
-    p = c.copy();
-    c = vec.copy();
+    p = c;
+    c = vec;
   }
 }

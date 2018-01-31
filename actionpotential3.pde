@@ -64,6 +64,8 @@ int gui_x = 10;
 int gui_y = 10;
 KinectStream k;
 PGraphics2D pg_canvas;
+PGraphics3D debug_canvas;
+
 PGraphics2D pg_impulse;
 PGraphics2D pg_noise;
 PGraphics2D pg_tmp;
@@ -99,10 +101,10 @@ public void settings() {
   } else {
     viewport_w = (int) min(viewport_w, displayWidth  * 0.9f);
     viewport_h = (int) min(viewport_h, displayHeight * 0.9f);
-    size(viewport_w, viewport_h, P2D);
+    size(viewport_w, viewport_h, P3D);
   }
   PJOGL.profile = 3;
-  smooth(8);
+  //smooth(8);
 }
 
 
@@ -161,7 +163,7 @@ public void setup() {
 
   createGUI();
 
-  frameRate(1000);
+  frameRate(100);
 }
 
 
@@ -174,6 +176,7 @@ public void resizeScene() {
   pg_canvas = (PGraphics2D) createGraphics(width, height, P2D);
   pg_canvas.smooth(0);
 
+  debug_canvas = (PGraphics3D) createGraphics(width, height, P3D);
 
   pg_tmp = (PGraphics2D) createGraphics(width, height, P2D);
   pg_tmp.smooth(0);
@@ -378,9 +381,12 @@ public void draw() {
   image(pg_canvas, 0, 0);
   blendMode(BLEND);
   if (showDebug) {
-    k.drawDebugs();
+    debug_canvas.beginDraw();
+    debug_canvas.clear();
+    k.drawDebugs(debug_canvas);
+    debug_canvas.endDraw();
+    image(debug_canvas, 0, 0);
   }
-
   info();
 }
 

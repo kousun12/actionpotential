@@ -28,7 +28,7 @@ exports.simulatorTextureHeight = amountInfo[1];
 exports.useReflectedGround = true;
 exports.whiteRatio = 0;
 exports.useTriangleParticles = true;
-exports.followMouse = false;
+exports.followMouse = true;
 exports.useKinect = false;
 
 exports.dieSpeed = 0.035;
